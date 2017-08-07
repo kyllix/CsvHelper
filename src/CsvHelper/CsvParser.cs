@@ -6,12 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using CsvHelper.Configuration;
-#if NET_2_0
-using CsvHelper.MissingFrom20;
-#endif
-#if !NET_2_0
 using System.Linq;
-#endif
 
 namespace CsvHelper
 {
@@ -433,6 +428,7 @@ namespace CsvHelper
 						// If we hit the delimiter, we are
 						// done reading the field and can
 						// add it to the record.
+						delimiterPosition = 0;
 						AppendField( ref field, fieldStartPosition, readerBufferPosition - fieldStartPosition - 1 );
 						// Include the comma in the byte count.
 						UpdateBytePosition( fieldStartPosition, readerBufferPosition - fieldStartPosition );
@@ -451,8 +447,15 @@ namespace CsvHelper
 						UpdateBytePosition( fieldStartPosition, readerBufferPosition - fieldStartPosition );
 						inDelimiter = false;
 						prevCharWasDelimiter = true;
-						delimiterPosition = 0;
 						fieldStartPosition = readerBufferPosition;
+					}
+					else if( configuration.Delimiter[delimiterPosition] != c )
+					{
+						// We're not actually in a delimiter. Reset things back
+						// to the previous field.
+						recordPosition--;
+						fieldStartPosition -= ( delimiterPosition + 1 );
+						inDelimiter = false;
 					}
 					else
 					{
@@ -538,7 +541,7 @@ namespace CsvHelper
 			{
 				// We need to read more of the stream.
 
-				if( !inDelimiter )
+				if( !inDelimiter && !inComment )
 				{
 					// The buffer ran out. Take the current
 					// text and add it to the field.
